@@ -13,4 +13,4 @@ async function Routes(){
      console.log(`Routes table created successfully`); 
 }
 
-module.exports = Routes ; 
+module.exports = Routes ;  
