@@ -1,17 +1,13 @@
-   const oracledb = require("oracledb"); 
-   require("dotenv").config();
+require("dotenv").config();
 
-  
-   
-async function database() {
-    
-       const  connection = await oracledb.getConnection({
-            user: process.env.DB_USER,
-            password: process.env.DB_PASSWORD,
-            connectString: process.env.DB_CONNECT_STRING
-        });
-        
-    return connection ; 
-}
+const postgres = require("postgres");
 
-module.exports = database ; 
+const sql = postgres({
+    host: process.env.POSTGRES_HOST,
+    port: process.env.POSTGRES_PORT,
+    database: process.env.POSTGRES_DATABASE,
+    username: process.env.POSTGRES_USER,
+    password: process.env.POSTGRES_PASSWORD
+});
+
+module.exports = sql;

@@ -1,35 +1,19 @@
-const connectTodatabase = require("../connection")
+const sql = require("../connection");
 
+async function handleInsertion(req, res) {
+    try {
+        const { id, name, type } = req.body;
 
-
-async function handleInsertion(req,res){
-      try {
-        const body = req.body;
-        const connection = await connectTodatabase()
-        await connection.execute(
-            `INSERT INTO TRAINS
-            VALUES(
-             :TRAIN_ID, 
-             :TRAIN_NAME,
-             :TRAIN_TYPE 
-            )`,
-            {
-                train_id:body.id , 
-                train_name:body.name, 
-                train_type:body.type 
-            },
-            {
-                autoCommit: true
-            }
-        );
+        await sql`
+            INSERT INTO TRAINS (TRAIN_ID, TRAIN_NAME, TRAIN_TYPE)
+            VALUES (${id}, ${name}, ${type})
+        `;
 
         res.json({
             msg: "success"
         });
 
-    }
-    catch (err) {
-
+    } catch (err) {
         console.log("Insert error:", err);
 
         res.status(500).json({
@@ -38,17 +22,15 @@ async function handleInsertion(req,res){
     }
 }
 
+async function handlegettraininfo(req, res) {
+    try {
+        const rows = await sql`
+            SELECT * FROM TRAINS
+        `;
 
-async function handlegettraininfo(req,res) {
-    try {   
-          const connection = await connectTodatabase()
-        const result = await connection.execute(
-            `SELECT * FROM TRAINS`
-        );
+        res.json(rows);
 
-        res.json(result.rows);
-    }
-    catch (err) {
+    } catch (err) {
         console.log("Fetch error:", err);
 
         res.status(500).json({
@@ -57,6 +39,7 @@ async function handlegettraininfo(req,res) {
     }
 }
 
-module.exports = { 
-       handleInsertion, handlegettraininfo
-}
+module.exports = {
+    handleInsertion,
+    handlegettraininfo
+};
