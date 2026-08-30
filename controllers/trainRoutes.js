@@ -1,39 +1,26 @@
-const connectTodatabase = require("../connection")
+
+const sql = require("../connection");
 
 
-
-async function handleInsertion(req,res){
-      try {
+async function handleInsertion(req, res) {
+    try {
         const body = req.body;
-        const connection = await connectTodatabase()
-        await connection.execute(
-            `INSERT INTO ROUTES
-            VALUES(
-           
-              :ROUTE_ID, 
-              :SOURCE_STATION_NAME , 
-              :DESTINATION_STATION_NAME , 
-              :DISTANCE 
-            )`,
-            {  
-              
-               route_id:body.id2, 
-               source_station_name:body.source, 
-               destination_station_name:body.destination, 
-               distance:body.distance 
-            },
-            {
-                autoCommit: true
-            }
-        );
+
+        await sql`
+            INSERT INTO ROUTES
+            VALUES (
+                ${body.id},
+                ${body.source},
+                ${body.destination},
+                ${body.distance}
+            )
+        `;
 
         res.json({
             msg: "success"
         });
 
-    }
-    catch (err) {
-
+    } catch (err) {
         console.log("Insert error:", err);
 
         res.status(500).json({
@@ -43,16 +30,15 @@ async function handleInsertion(req,res){
 }
 
 
-async function handlegetrouteinfo(req,res) {
-    try {   
-          const connection = await connectTodatabase()
-        const result = await connection.execute(
-            `SELECT * FROM ROUTES`
-        );
+async function handlegetrouteinfo(req, res) {
+    try {
+        const result = await sql`
+            SELECT * FROM ROUTES
+        `;
 
-        res.json(result.rows);
-    }
-    catch (err) {
+        res.json(result);
+
+    } catch (err) {
         console.log("Fetch error:", err);
 
         res.status(500).json({
@@ -61,6 +47,9 @@ async function handlegetrouteinfo(req,res) {
     }
 }
 
-module.exports = { 
-       handleInsertion, handlegetrouteinfo
-}
+
+module.exports = {
+    handleInsertion,
+    handlegetrouteinfo
+};
+
