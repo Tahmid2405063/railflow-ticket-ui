@@ -7,12 +7,9 @@ async function handleInsertion(req, res) {
         const body = req.body;
 
         await sql`
-            INSERT INTO ROUTES
-            VALUES (
-                ${body.id},
-                ${body.source},
-                ${body.destination},
-                ${body.distance}
+            INSERT INTO ROUTE(route_name,total_distance_km)
+            VALUES (${body.name},
+                   ${body.distance}
             )
         `;
 
@@ -33,7 +30,7 @@ async function handleInsertion(req, res) {
 async function handlegetrouteinfo(req, res) {
     try {
         const result = await sql`
-            SELECT * FROM ROUTES
+            SELECT * FROM ROUTE
         `;
 
         res.json(result);
