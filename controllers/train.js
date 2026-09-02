@@ -2,11 +2,11 @@ const sql = require("../connection");
 
 async function handleInsertion(req, res) {
     try {
-        const { id, name, type } = req.body;
+        const { name, type, seats } = req.body;
 
         await sql`
-            INSERT INTO TRAIN ( TRAIN_NAME, TRAIN_TYPE)
-            VALUES ( ${name}, ${type})
+            INSERT INTO TRAIN ( TRAIN_NAME, TRAIN_TYPE,TOTAL_SEATS)
+            VALUES ( ${name}, ${type}, ${seats})
         `;
 
         res.json({

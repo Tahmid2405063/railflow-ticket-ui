@@ -10,6 +10,7 @@ const app = expr();
 
 // Middleware
 app.use(expr.urlencoded({ extended: false }));
+// for json app.use(expr.json())
 
 
 
