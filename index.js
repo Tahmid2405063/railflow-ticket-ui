@@ -12,7 +12,7 @@ const app = expr();
 app.use(expr.urlencoded({ extended: false }));
 // for json app.use(expr.json())
 
-
+// frontend -> index -> route -> controller ->database server->controller response
 
 // Routes
 app.use("/api/train", trainRouter);
