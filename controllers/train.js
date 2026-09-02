@@ -5,8 +5,8 @@ async function handleInsertion(req, res) {
         const { id, name, type } = req.body;
 
         await sql`
-            INSERT INTO TRAINS (TRAIN_ID, TRAIN_NAME, TRAIN_TYPE)
-            VALUES (${id}, ${name}, ${type})
+            INSERT INTO TRAIN ( TRAIN_NAME, TRAIN_TYPE)
+            VALUES ( ${name}, ${type})
         `;
 
         res.json({
@@ -25,7 +25,7 @@ async function handleInsertion(req, res) {
 async function handlegettraininfo(req, res) {
     try {
         const rows = await sql`
-            SELECT * FROM TRAINS
+            SELECT * FROM TRAIN
         `;
 
         res.json(rows);
