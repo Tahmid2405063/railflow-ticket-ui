@@ -4,6 +4,7 @@ const pool = require('../connection');
 const router = express.Router();
 const sessions = new Map();
 const MAX_TICKETS_PER_PURCHASE = 4;
+const VALID_GENDERS = new Set(['Male', 'Female', 'Other']);
 
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 64).toString('hex');
@@ -28,6 +29,20 @@ function requireAuth(req, res, next) {
 }
 function ticketFare(row) {
   return Math.ceil(Number(row.base_fare) + Number(row.fare_per_km) * Number(row.total_distance_km));
+}
+function passengerDetailsError({ name, email, phone, age, gender }) {
+  if (!name || !email || !phone || age === undefined || age === null || String(age).trim() === '' || !gender) return 'Complete passenger details are required.';
+  if (!/^\d+$/.test(String(phone).trim())) return 'Phone number must contain digits only.';
+  const numericAge = Number(age);
+  if (!Number.isInteger(numericAge) || numericAge < 0 || numericAge > 120) return 'Age must be a whole number from 0 to 120.';
+  if (!VALID_GENDERS.has(gender)) return 'Choose Male, Female, or Other for gender.';
+  return null;
+}
+function clientError(error, fallback) {
+  if (error?.code === '23514') return 'One or more values do not meet the booking requirements. Please review the form and try again.';
+  if (error?.code === '23503') return 'Some journey details are no longer available. Please select the train and seats again.';
+  if (error?.code === '23505') return 'This booking conflicts with an existing record. Please refresh and choose another seat.';
+  return error?.message || fallback;
 }
 
 router.get('/health', async (_req, res) => {
@@ -92,7 +107,8 @@ router.get('/profile', requireAuth, async (req, res) => {
 
 router.put('/profile', requireAuth, async (req, res) => {
   const { name, email, phone, age, gender } = req.body;
-  if (!name || !email || !phone || !age || !gender) return res.status(400).json({ error: 'Name, email, phone, age, and gender are required.' });
+  const detailError = passengerDetailsError({ name, email, phone, age, gender });
+  if (detailError) return res.status(400).json({ error: detailError });
   const client = await pool.connect();
   try {
     await client.query('begin');
@@ -174,23 +190,30 @@ router.post('/bookings', requireAuth, async (req, res) => {
     await client.query('begin');
     const context = await client.query(`select s.schedule_id, r.total_distance_km, fr.fare_rule_id, fr.base_fare, fr.fare_per_km from schedule s join route r on r.route_id=s.route_id join fare_rule fr on fr.fare_rule_id=$2 and fr.route_id=r.route_id where s.schedule_id=$1`, [scheduleId, fareRuleId]);
     if (!context.rows[0]) throw new Error('Selected schedule or fare rule is no longer available.');
-    const fare = ticketFare(context.rows[0]); const created = []; const transactionId = `RF-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
+    const fare = ticketFare(context.rows[0]);
+    if (!Number.isFinite(fare) || fare < 0) throw new Error('The fare for this journey is invalid.');
+    if (!['CARD', 'MOBILE_BANKING'].includes(paymentMethod)) throw new Error('Choose a valid payment method.');
+    const created = []; const transactionId = `RF-${Date.now()}-${crypto.randomBytes(3).toString('hex').toUpperCase()}`;
     for (const passenger of passengers) {
-      if (!passenger.name || !passenger.email || !passenger.phone || !passenger.age || !passenger.gender || !passenger.seatId) throw new Error('Complete passenger details are required for every ticket.');
+      const detailError = passengerDetailsError(passenger);
+      if (detailError || !passenger.seatId) throw new Error(detailError || 'Select one seat for every ticket.');
       const seat = await client.query(`select st.seat_id from seat st join coach c on c.coach_id=st.coach_id join schedule sc on sc.train_id=c.train_id where sc.schedule_id=$1 and st.seat_id=$2`, [scheduleId, passenger.seatId]);
       if (!seat.rows[0]) throw new Error('A selected seat does not belong to this schedule.');
       let availability = await client.query('select seat_avail_id, seat_status from seat_availability where schedule_id=$1 and seat_id=$2 for update', [scheduleId, passenger.seatId]);
       let seatAvailId;
-      if (!availability.rows[0]) seatAvailId = (await client.query("insert into seat_availability (seat_status, schedule_id, seat_id) values ('BOOKED',$1,$2) returning seat_avail_id", [scheduleId, passenger.seatId])).rows[0].seat_avail_id;
-      else { if (String(availability.rows[0].seat_status).toUpperCase() !== 'AVAILABLE') throw new Error('One or more seats were just booked. Please choose another seat.'); seatAvailId = (await client.query("update seat_availability set seat_status='BOOKED' where seat_avail_id=$1 returning seat_avail_id", [availability.rows[0].seat_avail_id])).rows[0].seat_avail_id; }
+      if (!availability.rows[0]) seatAvailId = (await client.query("insert into seat_availability (seat_status, schedule_id, seat_id) values ('Booked',$1,$2) returning seat_avail_id", [scheduleId, passenger.seatId])).rows[0].seat_avail_id;
+      else { if (String(availability.rows[0].seat_status).toUpperCase() !== 'AVAILABLE') throw new Error('One or more seats were just booked. Please choose another seat.'); seatAvailId = (await client.query("update seat_availability set seat_status='Booked' where seat_avail_id=$1 returning seat_avail_id", [availability.rows[0].seat_avail_id])).rows[0].seat_avail_id; }
       const passengerRow = await client.query('insert into passenger (name,email,phone,age,gender) values ($1,$2,$3,$4,$5) returning passenger_id', [passenger.name, passenger.email, passenger.phone, Number(passenger.age), passenger.gender]);
-      const ticket = await client.query("insert into ticket (booking_date,ticket_status,fare_amount,passenger_id,boarding_stop_id,alighting_stop_id,fare_rule_id,seat_avail_id) values (now(),'CONFIRMED',$1,$2,$3,$4,$5,$6) returning ticket_id, ticket_status, fare_amount", [fare, passengerRow.rows[0].passenger_id, boardingStopId, alightingStopId, fareRuleId, seatAvailId]);
-      await client.query("insert into payment (transaction_id,payment_date,payment_method,payment_status,amount,ticket_id) values ($1,now(),$2,'PAID',$3,$4)", [transactionId, paymentMethod || 'CARD', fare, ticket.rows[0].ticket_id]);
+      const ticket = await client.query("insert into ticket (booking_date,ticket_status,fare_amount,passenger_id,boarding_stop_id,alighting_stop_id,fare_rule_id,seat_avail_id) values (now(),'Booked',$1,$2,$3,$4,$5,$6) returning ticket_id, ticket_status, fare_amount", [fare, passengerRow.rows[0].passenger_id, boardingStopId, alightingStopId, fareRuleId, seatAvailId]);
+      // The payment table only permits its listed payment methods. Mobile banking is
+      // recorded as Wallet, while card checkout is recorded as Credit Card.
+      const dbPaymentMethod = paymentMethod === 'MOBILE_BANKING' ? 'Wallet' : 'Credit Card';
+      await client.query("insert into payment (transaction_id,payment_date,payment_method,payment_status,amount,ticket_id) values ($1,now(),$2,'Success',$3,$4)", [transactionId, dbPaymentMethod, fare, ticket.rows[0].ticket_id]);
       created.push({ ...ticket.rows[0], passenger_id: passengerRow.rows[0].passenger_id, seat_id: passenger.seatId });
     }
     await client.query('commit');
     res.status(201).json({ transaction_id: transactionId, ticket_count: created.length, tickets: created, total_amount: fare * created.length });
-  } catch (error) { await client.query('rollback'); res.status(400).json({ error: error.message || 'Could not complete booking.' }); }
+  } catch (error) { await client.query('rollback'); res.status(400).json({ error: clientError(error, 'Could not complete booking.') }); }
   finally { client.release(); }
 });
 
@@ -198,15 +221,15 @@ router.post('/tickets/:ticketId/cancel', requireAuth, async (req, res) => {
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const ticket = await client.query('select ticket_id, fare_amount, seat_avail_id from ticket where ticket_id=$1 and ticket_status=$2 for update', [req.params.ticketId, 'CONFIRMED']);
+    const ticket = await client.query('select ticket_id, fare_amount, seat_avail_id from ticket where ticket_id=$1 and ticket_status=$2 for update', [req.params.ticketId, 'Booked']);
     if (!ticket.rows[0]) throw new Error('This ticket cannot be cancelled.');
     const refund = Math.max(0, Number(ticket.rows[0].fare_amount) - 150);
     await client.query("insert into cancellation (cancellation_date,reason,refund_amount,ticket_id) values (now(),$1,$2,$3)", [req.body.reason || 'Change of travel plan', refund, ticket.rows[0].ticket_id]);
-    await client.query("update ticket set ticket_status='CANCELLED' where ticket_id=$1", [ticket.rows[0].ticket_id]);
-    await client.query("update seat_availability set seat_status='AVAILABLE' where seat_avail_id=$1", [ticket.rows[0].seat_avail_id]);
-    await client.query("update payment set payment_status='REFUND_PENDING' where ticket_id=$1", [ticket.rows[0].ticket_id]);
+    await client.query("update ticket set ticket_status='Cancelled' where ticket_id=$1", [ticket.rows[0].ticket_id]);
+    await client.query("update seat_availability set seat_status='Available' where seat_avail_id=$1", [ticket.rows[0].seat_avail_id]);
+    await client.query("update payment set payment_status='Refunded' where ticket_id=$1", [ticket.rows[0].ticket_id]);
     await client.query('commit'); res.json({ ticket_id: ticket.rows[0].ticket_id, refund_amount: refund });
-  } catch (error) { await client.query('rollback'); res.status(400).json({ error: error.message || 'Could not cancel ticket.' }); }
+  } catch (error) { await client.query('rollback'); res.status(400).json({ error: clientError(error, 'Could not cancel ticket.') }); }
   finally { client.release(); }
 });
 
