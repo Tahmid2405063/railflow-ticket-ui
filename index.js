@@ -1,25 +1,15 @@
-const expr = require("express");
+const express = require('express');
+const path = require('path');
+const app = express();
+const port = process.env.PORT || 8000;
 
-
-const trainRouter = require("./routes/train");
-const routesRouter = require("./routes/trainRoutes");
-const passengerRouter = require("./routes/passenger")
-const port = 8000;
-const app = expr();
-
-
-// Middleware
-app.use(expr.urlencoded({ extended: false }));
-// for json app.use(expr.json())
-
-
-
-// Routes
-app.use("/api/train", trainRouter);
-app.use("/api/route", routesRouter);
-app.use("/api/passenger",passengerRouter);
-
-// Start server
-app.listen(port, () => {
-    console.log(`Server started on port ${port}`);
-});
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use('/api', require('./routes/api'));
+app.use(express.static(__dirname, {
+  setHeaders(res, filePath) {
+    if (/\.(?:html|js|css)$/i.test(filePath)) res.setHeader('Cache-Control', 'no-store');
+  }
+}));
+app.get(/^(?!\/api\/).*/, (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.listen(port, () => console.log(`RailFlow is running at http://localhost:${port}`));
