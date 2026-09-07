@@ -13,7 +13,6 @@ const authorizeRoles =
     require("../middleware/role");
 
 
-
 const {
 
     getUsers,
@@ -24,13 +23,21 @@ const {
 
     deleteTrain,
 
-    getAllBookings
+    getAllBookings,
+
+    createSchedule,
+
+    getRunningTrains,
+
+    getUpcomingTrains,
+
+    updateFare,
+
+    cancelTrip
 
 }
-
-    =
-    require("../controllers/adminController");
-
+=
+require("../controllers/adminController");
 
 
 
@@ -67,6 +74,70 @@ router.put(
 
 );
 
+router.post(
+
+    "/schedules",
+
+    authorizeRoles(
+        "Admin",
+        "Manager"
+    ),
+
+    createSchedule
+
+);
+
+router.get(
+
+    "/running-trains",
+
+    authorizeRoles(
+        "Admin",
+        "Manager"
+    ),
+
+    getRunningTrains
+
+);
+
+router.get(
+
+    "/upcoming-trains",
+
+    authorizeRoles(
+        "Admin",
+        "Manager"
+    ),
+
+    getUpcomingTrains
+
+);
+
+router.put(
+
+    "/fare/:fareRuleId",
+
+    authorizeRoles(
+        "Admin",
+        "Manager"
+    ),
+
+    updateFare
+
+);
+
+router.put(
+
+    "/cancel-trip/:scheduleId",
+
+    authorizeRoles(
+        "Admin"
+    ),
+
+    cancelTrip
+
+);
+
 
 
 
@@ -98,8 +169,7 @@ router.delete(
     "/trains/:trainId",
 
     authorizeRoles(
-        "Admin",
-        "Manager"
+        "Admin"
     ),
 
     deleteTrain

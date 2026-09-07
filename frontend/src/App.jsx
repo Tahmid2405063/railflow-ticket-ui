@@ -2706,12 +2706,124 @@ Your account information is securely managed by RailFlow.
 // ADMIN PAGE
 // ===============================
 
-
 function Admin(){
 
 
-
 const [users,setUsers]=useState([]);
+
+const [bookings,setBookings]=useState([]);
+
+const [running,setRunning]=useState([]);
+
+const [upcoming,setUpcoming]=useState([]);
+
+
+
+const [train,setTrain]=useState({
+
+    train_name:"",
+    train_type:"",
+    total_seats:""
+
+});
+
+
+
+const [schedule,setSchedule]=useState({
+
+    journey_date:"",
+    departure_time:"",
+    arrival_time:"",
+    train_id:"",
+    route_id:""
+
+});
+
+
+
+const [fare,setFare]=useState({
+
+    fareRuleId:"",
+    base_fare:"",
+    fare_per_km:""
+
+});
+
+
+
+const [cancelSchedule,setCancelSchedule]=useState("");
+
+
+
+
+
+// ===============================
+// LOAD ADMIN DATA
+// ===============================
+
+
+async function loadData(){
+
+
+try{
+
+
+const usersData =
+await api(
+"/admin/users"
+);
+
+
+setUsers(usersData);
+
+
+
+
+const bookingData =
+await api(
+"/admin/bookings"
+);
+
+
+setBookings(bookingData);
+
+
+
+
+const runningData =
+await api(
+"/admin/running-trains"
+);
+
+
+setRunning(runningData);
+
+
+
+
+
+const upcomingData =
+await api(
+"/admin/upcoming-trains"
+);
+
+
+setUpcoming(upcomingData);
+
+
+
+}
+
+catch(error){
+
+console.log(error);
+
+alert(error.message);
+
+}
+
+
+}
 
 
 
@@ -2720,42 +2832,7 @@ const [users,setUsers]=useState([]);
 useEffect(()=>{
 
 
-async function loadUsers(){
-
-
-try{
-
-
-const data =
-
-await api(
-
-"/admin/users"
-
-);
-
-
-
-setUsers(data);
-
-
-
-}
-
-catch(err){
-
-console.log(err);
-
-}
-
-
-
-}
-
-
-
-loadUsers();
-
+loadData();
 
 
 },[]);
@@ -2766,43 +2843,56 @@ loadUsers();
 
 
 
-if(
-
-user?.role!=="Admin"
-&&
-user?.role!=="Manager"
-
-){
+// ===============================
+// ADD TRAIN
+// ===============================
 
 
-return(
-
-<Layout>
+async function addTrain(e){
 
 
-<div className="panel">
+e.preventDefault();
 
 
-<h2>
-
-Access Denied
-
-</h2>
+try{
 
 
-<p>
+await api(
 
-You are not authorized to access this page.
+"/admin/trains",
 
-</p>
+{
 
+method:"POST",
 
-</div>
+body:JSON.stringify(train)
 
-
-</Layout>
+}
 
 );
+
+
+alert(
+"Train added successfully"
+);
+
+
+setTrain({
+
+train_name:"",
+train_type:"",
+total_seats:""
+
+});
+
+
+}
+
+catch(error){
+
+alert(error.message);
+
+}
 
 
 }
@@ -2811,11 +2901,292 @@ You are not authorized to access this page.
 
 
 
+
+
+
+// ===============================
+// DELETE TRAIN
+// ===============================
+
+
+async function deleteTrain(id){
+
+
+if(!window.confirm(
+"Delete this train?"
+))
+return;
+
+
+
+try{
+
+
+await api(
+
+`/admin/trains/${id}`,
+
+{
+
+method:"DELETE"
+
+}
+
+);
+
+
+
+alert(
+"Train deleted"
+);
+
+
+
+}
+
+catch(error){
+
+alert(error.message);
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+// ===============================
+// CHANGE ROLE
+// ===============================
+
+
+async function changeRole(id,role){
+
+
+try{
+
+
+await api(
+
+`/admin/users/${id}/role`,
+
+{
+
+method:"PUT",
+
+body:JSON.stringify({
+
+role
+
+})
+
+}
+
+);
+
+
+
+loadData();
+
+
+
+}
+
+catch(error){
+
+alert(error.message);
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+// ===============================
+// ADD SCHEDULE
+// ===============================
+
+
+async function addSchedule(e){
+
+
+e.preventDefault();
+
+
+
+try{
+
+
+await api(
+
+"/admin/schedules",
+
+{
+
+method:"POST",
+
+body:JSON.stringify(schedule)
+
+}
+
+);
+
+
+
+alert(
+"Schedule added"
+);
+
+
+
+}
+
+catch(error){
+
+alert(error.message);
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
+// ===============================
+// UPDATE FARE
+// ===============================
+
+
+async function updateFare(e){
+
+
+e.preventDefault();
+
+
+
+try{
+
+
+await api(
+
+`/admin/fare/${fare.fareRuleId}`,
+
+{
+
+method:"PUT",
+
+body:JSON.stringify({
+
+base_fare:fare.base_fare,
+
+fare_per_km:fare.fare_per_km
+
+})
+
+}
+
+);
+
+
+
+alert(
+"Fare updated"
+);
+
+
+
+}
+
+catch(error){
+
+alert(error.message);
+
+}
+
+
+}
+
+
+
+
+
+
+
+
+// ===============================
+// CANCEL TRIP
+// ===============================
+
+
+async function cancelTrip(){
+
+
+
+try{
+
+
+await api(
+
+`/admin/cancel-trip/${cancelSchedule}`,
+
+{
+
+method:"PUT"
+
+}
+
+);
+
+
+
+alert(
+"Trip cancelled"
+);
+
+
+
+}
+
+catch(error){
+
+alert(error.message);
+
+}
+
+
+
+}
+
+
+
+
+
+
+
+
 return(
 
 
 <Layout>
-
 
 
 <div className="panel">
@@ -2823,11 +3194,29 @@ return(
 
 <h2>
 
-Admin Management
+Admin Dashboard
 
 </h2>
 
 
+
+</div>
+
+
+
+
+
+{/* ================= USERS ================= */}
+
+
+<div className="panel">
+
+
+<h3>
+
+Users
+
+</h3>
 
 
 
@@ -2839,29 +3228,15 @@ Admin Management
 
 <thead>
 
-
 <tr>
 
+<th>Name</th>
 
-<th>
+<th>Email</th>
 
-Name
+<th>Role</th>
 
-</th>
-
-
-<th>
-
-Email
-
-</th>
-
-
-<th>
-
-Role
-
-</th>
+<th>Action</th>
 
 
 </tr>
@@ -2874,47 +3249,74 @@ Role
 <tbody>
 
 
-
 {
 
-users.map(
-
-item=>(
+users.map(user=>(
 
 
-<tr
+<tr key={user.user_id}>
 
-key={
-item.user_id
+
+<td>
+
+{user.name}
+
+</td>
+
+
+
+<td>
+
+{user.email}
+
+</td>
+
+
+
+
+<td>
+
+
+<select
+
+value={user.role}
+
+onChange={
+e=>
+
+changeRole(
+user.user_id,
+e.target.value
+)
+
 }
 
 >
 
 
-<td>
+<option>
+Customer
+</option>
 
-{
-item.name
-}
+<option>
+Manager
+</option>
+
+<option>
+Admin
+</option>
+
+
+</select>
+
 
 </td>
 
 
-<td>
-
-{
-item.email
-}
-
-</td>
-
-
 
 <td>
 
-{
-item.role
-}
+Role Update
 
 </td>
 
@@ -2922,10 +3324,7 @@ item.role
 </tr>
 
 
-)
-
-
-)
+))
 
 
 }
@@ -2935,15 +3334,594 @@ item.role
 </tbody>
 
 
+
 </table>
 
 
-
 </div>
 
 
 
 </div>
+
+
+
+
+
+
+
+
+
+{/* ================= ADD TRAIN ================= */}
+
+
+<div className="panel">
+
+
+<h3>
+
+Add Train
+
+</h3>
+
+
+
+<form
+className="form-grid"
+onSubmit={addTrain}
+>
+
+
+<input
+
+placeholder="Train Name"
+
+value={train.train_name}
+
+onChange={
+e=>
+
+setTrain({
+
+...train,
+
+train_name:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+
+<input
+
+placeholder="Train Type"
+
+value={train.train_type}
+
+onChange={
+e=>
+
+setTrain({
+
+...train,
+
+train_type:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+
+<input
+
+type="number"
+
+placeholder="Total Seats"
+
+value={train.total_seats}
+
+onChange={
+e=>
+
+setTrain({
+
+...train,
+
+total_seats:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+<button className="primary">
+
+Add Train
+
+</button>
+
+
+
+</form>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+{/* ================= RUNNING ================= */}
+
+
+<div className="panel">
+
+
+<h3>
+
+Running Trains
+
+</h3>
+
+
+{
+
+running.map(
+
+(item,index)=>(
+
+
+<p key={index}>
+
+🚆 {item.train_name}
+
+</p>
+
+
+)
+
+)
+
+}
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+{/* ================= UPCOMING ================= */}
+
+
+<div className="panel">
+
+
+<h3>
+
+Upcoming Trains
+
+</h3>
+
+
+{
+
+upcoming.map(
+
+(item,index)=>(
+
+
+<p key={index}>
+
+🚆 {item.train_name}
+
+-
+{item.journey_date}
+
+</p>
+
+
+)
+
+)
+
+}
+
+
+
+</div>
+
+
+
+
+
+
+
+
+
+{/* ================= SCHEDULE ================= */}
+
+
+<div className="panel">
+
+
+<h3>
+
+Add Schedule
+
+</h3>
+
+
+
+<form
+
+className="form-grid"
+
+onSubmit={addSchedule}
+
+>
+
+
+<input
+
+type="date"
+
+onChange={
+e=>
+
+setSchedule({
+
+...schedule,
+
+journey_date:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+<input
+
+placeholder="Departure Time"
+
+onChange={
+e=>
+
+setSchedule({
+
+...schedule,
+
+departure_time:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+
+<input
+
+placeholder="Arrival Time"
+
+onChange={
+e=>
+
+setSchedule({
+
+...schedule,
+
+arrival_time:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+
+<input
+
+placeholder="Train ID"
+
+onChange={
+e=>
+
+setSchedule({
+
+...schedule,
+
+train_id:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+
+<input
+
+placeholder="Route ID"
+
+onChange={
+e=>
+
+setSchedule({
+
+...schedule,
+
+route_id:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+<button className="primary">
+
+Add Schedule
+
+</button>
+
+
+
+</form>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+{/* ================= FARE ================= */}
+
+
+<div className="panel">
+
+
+<h3>
+
+Update Fare
+
+</h3>
+
+
+
+<form
+
+className="form-grid"
+
+onSubmit={updateFare}
+
+>
+
+
+<input
+
+placeholder="Fare Rule ID"
+
+onChange={
+e=>
+
+setFare({
+
+...fare,
+
+fareRuleId:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+
+<input
+
+placeholder="Base Fare"
+
+onChange={
+e=>
+
+setFare({
+
+...fare,
+
+base_fare:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+<input
+
+placeholder="Fare Per KM"
+
+onChange={
+e=>
+
+setFare({
+
+...fare,
+
+fare_per_km:e.target.value
+
+})
+
+}
+
+/>
+
+
+
+<button className="primary">
+
+Update Fare
+
+</button>
+
+
+
+</form>
+
+
+</div>
+
+
+
+
+
+
+
+
+
+{/* ================= CANCEL TRIP ================= */}
+
+
+<div className="panel">
+
+
+<h3>
+
+Cancel Trip
+
+</h3>
+
+
+
+<input
+
+placeholder="Schedule ID"
+
+value={cancelSchedule}
+
+onChange={
+e=>
+
+setCancelSchedule(
+e.target.value
+)
+
+}
+
+/>
+
+
+
+<button
+
+className="danger"
+
+onClick={cancelTrip}
+
+>
+
+Cancel Trip
+
+</button>
+
+
+</div>
+
+
+
+
+
+
+
+
+{/* ================= BOOKINGS ================= */}
+
+
+<div className="panel">
+
+
+<h3>
+
+All Bookings
+
+</h3>
+
+
+{
+
+bookings.map(
+
+item=>(
+
+
+<p key={item.ticket_id}>
+
+Ticket #{item.ticket_id}
+
+-
+{item.passenger}
+
+-
+{item.ticket_status}
+
+
+</p>
+
+
+)
+
+)
+
+}
+
+
+</div>
+
+
+
+
+
+
 
 
 
@@ -2951,7 +3929,6 @@ item.role
 
 
 );
-
 
 
 }
