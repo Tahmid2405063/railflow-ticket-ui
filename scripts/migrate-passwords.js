@@ -9,10 +9,10 @@ function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const client = await pool.connect();
   try {
     await client.query('begin');
-    const users = await client.query('select user_id, "Password" from users for update');
+    const users = await client.query('select user_id, password from users for update');
     for (const user of users.rows) {
-      if (!String(user.Password).includes(':')) {
-        await client.query('update users set "Password"=$1 where user_id=$2', [hashPassword(user.Password), user.user_id]);
+      if (!String(user.password).includes(':')) {
+        await client.query('update users set password=$1 where user_id=$2', [hashPassword(user.password), user.user_id]);
       }
     }
     await client.query('commit');

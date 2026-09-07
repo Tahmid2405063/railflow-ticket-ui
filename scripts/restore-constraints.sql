@@ -1,4 +1,8 @@
 -- Course-required domain constraints. Run after checking existing data.
+ALTER TABLE users ADD COLUMN IF NOT EXISTS mobile_number varchar;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS nid_number varchar;
+ALTER TABLE users ADD CONSTRAINT users_mobile_number_check CHECK (mobile_number IS NULL OR mobile_number ~ '^[0-9]{11}$') NOT VALID;
+ALTER TABLE users ADD CONSTRAINT users_nid_number_check CHECK (nid_number IS NULL OR nid_number ~ '^[0-9]{10,17}$') NOT VALID;
 ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('Admin','Manager','Staff','Customer')) NOT VALID;
 ALTER TABLE train ADD CONSTRAINT train_train_type_check CHECK (train_type IN ('Express','Intercity','Passenger','Freight','Superfast')) NOT VALID;
 ALTER TABLE coach ADD CONSTRAINT coach_coach_class_check CHECK (coach_class IN ('AC First Class','AC 2-Tier','AC 3-Tier','Sleeper','General','Chair Car')) NOT VALID;
