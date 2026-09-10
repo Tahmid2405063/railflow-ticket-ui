@@ -1,0 +1,7 @@
+-- -- Seed sample rail schedules.
+-- -- Replace the route_id and train_id values below with ids that exist in your database.
+-- INSERT INTO schedule (route_id, train_id, journey_date, departure_time, arrival_time)
+-- VALUES
+--   (1, 1, '2026-09-10', '08:00:00', '12:30:00'),
+--   (1, 2, '2026-09-10', '09:30:00', '13:45:00'),
+--   (2, 3, '2026-09-11', '15:00:00', '18:10:00');

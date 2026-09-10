@@ -12,6 +12,8 @@ function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const hash = crypto.scryptSync(password, salt, 64).toString('hex');
   return `${salt}:${hash}`;
 }
+
+
 function verifyPassword(password, stored) {
   const [salt, expected] = String(stored || '').split(':');
   if (!salt || !expected) {
@@ -19,6 +21,7 @@ function verifyPassword(password, stored) {
     const legacy = Buffer.from(String(stored || ''));
     return input.length === legacy.length && crypto.timingSafeEqual(input, legacy);
   }
+
   const actual = crypto.scryptSync(password, salt, 64).toString('hex');
   return crypto.timingSafeEqual(Buffer.from(actual, 'hex'), Buffer.from(expected, 'hex'));
 }
@@ -27,6 +30,7 @@ function createSession(user) {
   sessions.set(token, { user, expiresAt: Date.now() + SESSION_TTL_MS });
   return token;
 }
+
 function requireAuth(req, res, next) {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, '');
   const session = token && sessions.get(token);
@@ -39,6 +43,7 @@ function requireAuth(req, res, next) {
   req.user = session.user;
   next();
 }
+
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!roles.includes(req.user.role)) return res.status(403).json({ error: 'You do not have permission to perform this action.' });
