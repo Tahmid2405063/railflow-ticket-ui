@@ -1,5 +1,8 @@
 require('dotenv').config();
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// Parse PostgreSQL DATE (OID 1082) as exact plain string 'YYYY-MM-DD'
+types.setTypeParser(1082, val => val);
 
 const pool = new Pool({
   host: process.env.POSTGRES_HOST,
